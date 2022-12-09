@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>SignalR</title>
+
+    <script src="signalr.min.js"></script>
+    <script src="jquery.min.js"></script>
+
+    <script>
+      $(document).ready(() => {
+        const connection = new signalR.HubConnectionBuilder()
+          .withUrl("https://localhost:5001/myhub")
+          .withAutomaticReconnect([1000, 1000, 2000]) //Bağlantı var fakat kopmuş
+          .build();
+
+        //baglantının hiç olmadığı durumlarda kullanılan fonksiyon bağlantı yok
+        async function start() {
+          try {
+            await connection.start();
+          } catch (error) {
+            setTimeout(() => start(), 2000);
+          }
+        }
+        start();
+
+        const clientStatus = $("#clientStatus");
+
+        connection.onreconnecting((error) => {
+          clientStatus.css("background-color", "yellow");
+          clientStatus.css("color", "black");
+          clientStatus.html("Baglantı kuruluyor ...");
+
+          clientStatus.fadeIn(2000, () => {
+            setTimeout(() => {
+              clientStatus.fadeOut(2000);
+            }, 2000);
+          });
+        });
+
+        connection.onreconnected((connectionId) => {
+          clientStatus.css("background-color", "green");
+          clientStatus.css("color", "black");
+          clientStatus.html("Baglantı kuruldu .");
+
+          clientStatus.fadeIn(2000, () => {
+            setTimeout(() => {
+              clientStatus.fadeOut(2000);
+            }, 2000);
+          });
+        });
+
+        connection.onclose((connectionId) => {
+          clientStatus.css("background-color", "red");
+          clientStatus.css("color", "black");
+          clientStatus.html("Baglantı kurulamadı .");
+
+          clientStatus.fadeIn(2000, () => {
+            setTimeout(() => {
+              clientStatus.fadeOut(2000);
+            }, 2000);
+          });
+        });
+
+        connection.on("userJoined", (connectionId) => {
+          /*  $("#userActions").append(
+            connectionId + " Sohbete Katıldı." + "<br> <br> <br>"
+          );*/
+        });
+
+        connection.on("userLeaved", (connectionId) => {
+          /* $("#userActions").append(
+            connectionId + " Sohbetten Ayrıldı." + "<br> <br> <br>"
+          );*/
+        });
+
+        connection.on("clients", (clientsData) => {
+          let text = "";
+          $.each(clientsData, (index, item) => {
+            text += `<li>${item}</li>`;
+            $("#clients").html(text);
+          });
+        });
+
+        $("#btnSend").click(() => {
+          let message = $("#txtMessage").val();
+
+          connection
+            .invoke("SendMessageAsync", message)
+            .catch((error) => console.log(error));
+        });
+        connection.on("receiveMessage", (message) => {
+          $("#messagesBox").append(message + "<br>");
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="clientStatus" style="display: none"></div>
+    <input type="text" id="txtMessage" />
+    <button id="btnSend">Gönder</button>
+
+    <div id="messagesBox"></div>
+
+    <!--<div id="userActions"></div>-->
+
+    <div>
+      <ul id="clients"></ul>
+    </div>
+  </body>
+</html>
