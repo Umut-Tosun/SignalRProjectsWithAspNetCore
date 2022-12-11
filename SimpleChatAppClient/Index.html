@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Simple Chat App</title>
+    <script src="signalr.min.js"></script>
+    <script src="jquery.min.js"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+      integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      $(document).ready(() => {
+        const connection=new signalR.HubConnectionBuilder().withUrl("https://localhost:5001/chathub").build();
+        connection.start();
+        $(".disabled").attr("disabled", "disabled");
+        $("body").on("click","users",function(){
+        console.log(1);
+        $(".users").each((index,item) => {
+            item.classList.remove("active");
+        });
+        $(this).addClass("active");
+      });
+      
+    
+      $("#btnSend").click(() => {
+        var x=$(".message").clone();
+        x.removeClass("message");
+        x.find("h5")[1].innerHTML="";
+        x.find("h5")[0].innerHTML="";
+        $(".messages").append(x);
+
+      });
+      $("#btnLogin").click(() => {
+        const nickName=$("#txtNickName").val();
+        connection.invoke("GetNickName",nickName).catch(error => console.log(`Alınan Hata ${error}`));
+        $(".disabled").removeAttr("disabled");
+
+      });
+
+      connection.on("clientJoined",nickName=> {      
+        $("#clientJoinedTrigger").html(`${nickName} Giriş Yaptı.`);
+      
+        $("#clientJoinedTrigger").fadeIn(2000,()=>{
+            setTimeout(()=>{
+                $("#clientJoinedTrigger").fadeOut(2000);
+            },2000)
+        });
+
+      });
+
+      connection.on("clients",clients=>{
+        $("#_clients").html("");
+      $.each(clients,(index,item) => {
+        const user = $(".users").first().clone();
+        user.removeClass("active");
+        user.html(item.nickName);
+        $("#_clients").append(user);
+      })
+      });
+    });
+    </script>
+  </head>
+  <body>
+    <div class="row">
+      <div class="col-md-1"></div>
+      <div class="col-md-10">
+        <div class="row">
+          <div class="col-md-3">
+            <input
+              class="form-control form-control-lg disabled"
+              type="text"
+              placeholder="Oda Adını Giriniz"
+            />
+            <button type="button" class="btn btn-info rightButton disabled">
+              Oda oluştur
+            </button>
+            <select
+              size="5"
+              style="width: 100%"
+              class="form-select disabled"
+              multiple
+            >
+              <option selected value="-1">Odalar</option>
+            </select>
+            <button type="button" class="btn btn-primary rightButton disabled">
+              Seçili Odalara Gir
+            </button>
+            <br /><br /><br />
+            <div class="list-group clients">
+              <a class="list-group-item list-group-item-action users active">Tümü </a>
+              <div id="_clients">
+
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div
+              class="alert alert-success"
+              id="clientDurumMessages"
+              style="display: none"
+            ></div>
+            <div class="alert alert-success" id="clientJoinedTrigger" style="display: none;">
+              
+              </div>
+            <textarea
+              rows="3"
+              class="form-control"
+              style="margin-top: 5px"
+              placeholder="Mesajınız"
+            ></textarea>
+            <button
+              type="button"
+              class="btn btn-light rightButton"
+              id="btnSend"
+            >
+              Gönder
+            </button>
+            <br /><br /><br />
+            <div class="list-group">
+              <a
+                class="list-group-item list-group-item-action"
+                aria-current="true"
+              >
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">Ahmet</h5>
+                  <h5 class="mb-2">Sen</h5>
+                </div>
+                <p class="mb-1">Testfdjlfdlfdlkldfklfdkldfkfldkdfl</p>
+                <small>Done smales tehe mojsl</small>
+              </a>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <input
+              class="form-control form-control-lg"
+              type="text"
+              placeholder="Adınız/Nickname"
+              id="txtNickName"
+            />
+            <button
+              type="button"
+              class="btn btn-success leftButton"
+              id="btnLogin"
+            >
+              Giriş Yap
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-1"></div>
+    </div>
+  </body>
+</html>
