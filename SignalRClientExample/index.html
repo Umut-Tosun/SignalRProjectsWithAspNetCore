@@ -9,7 +9,7 @@
     <script>
       $(document).ready(() => {
         const connection = new signalR.HubConnectionBuilder()
-          .withUrl("https://localhost:5001/myhub")
+          .withUrl("https://localhost:5001/messagehub")
           .withAutomaticReconnect([1000, 1000, 2000]) //Bağlantı var fakat kopmuş
           .build();
 
@@ -80,12 +80,34 @@
             $("#clients").html(text);
           });
         });
-
+        let cId = "";
+        connection.on("getConnectionId", (connectionId) => {
+          cId = connectionId;
+          $("#connectionId").html(`Baglantı Kimliginiz : ${connectionId}`);
+        });
+        let groupName = "";
+        $("#joinGroup").click(() => {
+          groupName = $("input[name=grup]:checked").val();
+          connection
+            .invoke("addGroup", cId, groupName)
+            .catch((error) => console.log(error));
+        });
         $("#btnSend").click(() => {
           let message = $("#txtMessage").val();
 
-          connection
-            .invoke("SendMessageAsync", message)
+         // let connectionsIds = $("#connectionIds").val().split(",");
+         let groupNames = $("#connectionIds").val().split(",");
+          /*
+         connection
+            .invoke("SendMessageAsync", message, connectionsIds)
+            .catch((error) => console.log(error));*/
+
+          /*connection
+            .invoke("SendMessageAsync", message, groupName,connectionsIds)
+            .catch((error) => console.log(error));*/
+
+            connection
+            .invoke("SendMessageAsync", message, groupNames[0])
             .catch((error) => console.log(error));
         });
         connection.on("receiveMessage", (message) => {
@@ -95,8 +117,21 @@
     </script>
   </head>
   <body>
+    <div id="connectionId"></div>
+    <input type="radio" name="grup" value="A" /> A
+    <input type="radio" name="grup" value="B" /> B
+    <input type="radio" name="grup" value="C" /> C
+
+    <button id="joinGroup">Gruba Gir</button>
+    <br />
     <div id="clientStatus" style="display: none"></div>
     <input type="text" id="txtMessage" />
+    <br /><br />
+    <h3>Mesaj Hangi Gruplara Gitsin</h3>
+    <textarea id="connectionIds" rows="10" style="width: 25%"></textarea>
+    <br />
+    <br />
+
     <button id="btnSend">Gönder</button>
 
     <div id="messagesBox"></div>
