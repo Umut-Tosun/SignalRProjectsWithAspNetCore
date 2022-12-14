@@ -18,54 +18,120 @@
     ></script>
     <script>
       $(document).ready(() => {
-        const connection=new signalR.HubConnectionBuilder().withUrl("https://localhost:5001/chathub").build();
+        const connection = new signalR.HubConnectionBuilder()
+          .withUrl("https://localhost:5001/chathub")
+          .build();
         connection.start();
         $(".disabled").attr("disabled", "disabled");
-        $("body").on("click","users",function(){
-        console.log(1);
-        $(".users").each((index,item) => {
+        $("body").on("click", ".users", function () {
+         
+          $(".users").each((index, item) => {
             item.classList.remove("active");
-        });
-        $(this).addClass("active");
-      });
-      
-    
-      $("#btnSend").click(() => {
-        var x=$(".message").clone();
-        x.removeClass("message");
-        x.find("h5")[1].innerHTML="";
-        x.find("h5")[0].innerHTML="";
-        $(".messages").append(x);
-
-      });
-      $("#btnLogin").click(() => {
-        const nickName=$("#txtNickName").val();
-        connection.invoke("GetNickName",nickName).catch(error => console.log(`Alınan Hata ${error}`));
-        $(".disabled").removeAttr("disabled");
-
-      });
-
-      connection.on("clientJoined",nickName=> {      
-        $("#clientJoinedTrigger").html(`${nickName} Giriş Yaptı.`);
-      
-        $("#clientJoinedTrigger").fadeIn(2000,()=>{
-            setTimeout(()=>{
-                $("#clientJoinedTrigger").fadeOut(2000);
-            },2000)
+          });
+          $(this).addClass("active");
         });
 
-      });
+      
+        $("#btnLogin").click(() => {
+          const nickName = $("#txtNickName").val();
+          if(nickName!="")
+          {
+          connection
+            .invoke("GetNickName", nickName)
+            .catch((error) => console.log(`Alınan Hata ${error}`));
+          $(".disabled").removeAttr("disabled");
 
-      connection.on("clients",clients=>{
-        $("#_clients").html("");
-      $.each(clients,(index,item) => {
-        const user = $(".users").first().clone();
-        user.removeClass("active");
-        user.html(item.nickName);
-        $("#_clients").append(user);
-      })
+         
+          }
+        else
+        {
+          window.alert("Kullanıcı Adı Boş Olamaz !");
+        }
+     
+        });
+      
+
+        connection.on("clientJoined", (nickName) => {
+          $("#clientJoinedTrigger").html(`${nickName} Giriş Yaptı.`);
+
+          $("#clientJoinedTrigger").fadeIn(2000, () => {
+            setTimeout(() => {
+              $("#clientJoinedTrigger").fadeOut(2000);
+            }, 2000);
+          });
+        });
+
+        connection.on("clients", (clients) => {
+          $("#_clients").html("");
+          $.each(clients, (index, item) => {
+            const user = $(".users").first().clone();
+            user.removeClass("active");
+            user.html(item.nickName);
+            $("#_clients").append(user);
+          });
+        });
+        connection.on("receiveMessage",(message,nickname)=>{
+         
+         const _message= $(".message").clone();
+         _message.removeClass("message");
+         _message.find("p").html(message);
+         _message.find("h5")[0].innerHTML=nickname;
+         $(".messages").append(_message);
+        })
+        $("#btnSend").click(()=>{
+          const clientName=$(".users.active").first().html();
+          const message=$("#txtMessage").val();
+          connection.invoke("SendMessageAsync",message,clientName);
+
+          const _message= $(".message").clone();
+         _message.removeClass("message");
+         _message.find("p").html(message);
+         _message.find("h5")[1].innerHTML="sen";
+         $(".messages").append(_message);
+
+        });
+        $("#btnCreateGroup").click(()=>{
+          connection.invoke("AddGroup",$("#groupName").val());
+        });
+        connection.on("groups",groupnames=>{
+          let  options="";
+          options+=`<option selected value="${-1}">Tüm Odalar</option>`;
+          $.each(groupnames,(Index,item)=>{
+           options+=`<option value="${item.groupName}">${item.groupName}</option>`
+          });
+          $(".rooms").html(options);
+        });
+        $("#btnJoinGroups").click(()=>{
+          let groupNames=[];
+          $(".rooms option:Selected").map((i,e)=>{
+            groupNames.push(e.innerHTML);
+
+          });
+          connection.invoke("AddClientToGroup",groupNames);
+
+        });
+        let _groupName="";
+        $(".rooms").change(function(){
+          let groupName=$(this).val();
+          _groupName=groupName[0];
+          connection.invoke("GetClientToGroup",groupName[0]);
+
+        });
+        $("#btnSendGroup").click(()=>{
+          const message=$("#txtMessage").val();
+          if(_groupName!="")
+          {
+            connection.invoke("SendMessageToGroupAsync",_groupName,message);
+            const _message= $(".message").clone();
+         _message.removeClass("message");
+         _message.find("p").html(message);
+         _message.find("h5")[1].innerHTML=`Sen <p>Gönderilen Grup ${_groupName}</p>`;
+         $(".messages").append(_message);
+           
+          }
+
+        });
       });
-    });
     </script>
   </head>
   <body>
@@ -77,28 +143,32 @@
             <input
               class="form-control form-control-lg disabled"
               type="text"
-              placeholder="Oda Adını Giriniz"
+              placeholder="Oda Adını Giriniz" id="groupName"
             />
-            <button type="button" class="btn btn-info rightButton disabled">
+            <br>
+            <button type="button" id="btnCreateGroup" class="btn btn-info rightButton disabled" >
               Oda oluştur
             </button>
+            <br> <br>
             <select
               size="5"
               style="width: 100%"
-              class="form-select disabled"
+              class="form-select disabled rooms"
               multiple
             >
-              <option selected value="-1">Odalar</option>
+              <option selected value="-1">Tüm Odalar</option>
             </select>
-            <button type="button" class="btn btn-primary rightButton disabled">
+            <br>
+            <br>
+            <button type="button" id="btnJoinGroups"  class="btn btn-primary rightButton disabled">
               Seçili Odalara Gir
             </button>
             <br /><br /><br />
             <div class="list-group clients">
-              <a class="list-group-item list-group-item-action users active">Tümü </a>
-              <div id="_clients">
-
-              </div>
+              <a class="list-group-item list-group-item-action users active"
+                >Tümü
+              </a>
+              <div id="_clients"></div>
             </div>
           </div>
           <div class="col-md-6">
@@ -107,34 +177,46 @@
               id="clientDurumMessages"
               style="display: none"
             ></div>
-            <div class="alert alert-success" id="clientJoinedTrigger" style="display: none;">
-              
-              </div>
+            <div
+              class="alert alert-success"
+              id="clientJoinedTrigger"
+              style="display: none"
+            ></div>
             <textarea
               rows="3"
               class="form-control"
               style="margin-top: 5px"
               placeholder="Mesajınız"
+              id="txtMessage"
             ></textarea>
+            <br>
+            <button
+            type="button"
+            class="btn btn-info rightButton"
+            id="btnSendGroup"
+          >
+          Seçili Gruba Mesaj  Gönder
+          </button>
             <button
               type="button"
-              class="btn btn-light rightButton"
+              class="btn btn-warning rightButton"
               id="btnSend"
             >
-              Gönder
+             Herkese Gönder
             </button>
+            
             <br /><br /><br />
-            <div class="list-group">
+            <div class="list-group messages">
               <a
-                class="list-group-item list-group-item-action"
+                class="list-group-item list-group-item-action message"
                 aria-current="true"
               >
                 <div class="d-flex w-100 justify-content-between">
-                  <h5 class="mb-1">Ahmet</h5>
-                  <h5 class="mb-2">Sen</h5>
+                  <h5 class="mb-1"></h5>
+                  <h5 class="mb-2"></h5>
                 </div>
-                <p class="mb-1">Testfdjlfdlfdlkldfklfdkldfkfldkdfl</p>
-                <small>Done smales tehe mojsl</small>
+                <p class="mb-1"></p>
+                
               </a>
             </div>
           </div>
@@ -145,6 +227,7 @@
               placeholder="Adınız/Nickname"
               id="txtNickName"
             />
+            <br>
             <button
               type="button"
               class="btn btn-success leftButton"
