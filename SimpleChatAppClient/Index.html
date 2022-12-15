@@ -40,6 +40,26 @@
             .invoke("GetNickName", nickName)
             .catch((error) => console.log(`Alınan Hata ${error}`));
           $(".disabled").removeAttr("disabled");
+          let  options="";
+          connection.on("groups",groupnames=>{
+         
+          options+=`<option selected value="${-1}">Tüm Odalar</option>`;
+          $.each(groupnames,(Index,item)=>{
+           options+=`<option value="${item.groupName}">${item.groupName}</option>`
+          })});
+          $(".rooms").html(options);
+
+          document.querySelector("#btnLogin").classList += " disabled";
+          $("#btnSend").removeClass("disabled");
+          $("#btnSendGroup").removeClass("disabled");
+          $("#btnCreateGroup").removeClass("disabled");
+          $("#btnJoinGroups").removeClass("disabled");
+
+
+          $("#txtNickName").prop("readonly",true);
+          $("#txtMessage").prop("readonly",false);
+
+
 
          
           }
@@ -188,18 +208,19 @@
               style="margin-top: 5px"
               placeholder="Mesajınız"
               id="txtMessage"
+              readonly
             ></textarea>
             <br>
             <button
             type="button"
-            class="btn btn-info rightButton"
+            class="btn btn-info rightButton disabled"
             id="btnSendGroup"
           >
           Seçili Gruba Mesaj  Gönder
           </button>
             <button
               type="button"
-              class="btn btn-warning rightButton"
+              class="btn btn-warning rightButton disabled"
               id="btnSend"
             >
              Herkese Gönder
