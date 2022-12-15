@@ -20,6 +20,7 @@ namespace SimpleChatAppWithSignalR.Hubs
             ClientSource.clients.Add(client);
             await Clients.Others.SendAsync("clientJoined", nickName);
             await Clients.All.SendAsync("clients", ClientSource.clients);
+            await Clients.All.SendAsync("groups", GroupSource.groups);
         }
         public async Task SendMessageAsync(string message, string clientName)
         {
